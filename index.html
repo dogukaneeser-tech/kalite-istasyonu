@@ -218,7 +218,18 @@
         <span class="meter"><i id="stabBar"></i></span>
         <span class="meterval" id="stabVal">—</span>
       </div>
+      <div class="lab-row">
+        <label>"Bilmiyorum" eşiği</label>
+        <input type="range" id="oodSlider" min="0" max="0.9" step="0.02" value="0">
+        <span class="kval" id="oodVal">kapalı</span>
+      </div>
+      <div class="lab-row">
+        <label>şu an benzerlik</label>
+        <span class="meter"><i id="simBar"></i></span>
+        <span class="meterval" id="simVal">—</span>
+      </div>
       <div class="labnote">Her kare MobileNet ile 1280 sayıya (gömülüm) dönüşür. Burası o uzayın 2B izdüşümü; sınıflandırma = bu uzayda en yakın <b>k</b> komşuya bakmak.</div>
+      <div class="labnote" style="border-color:rgba(255,176,32,.45)"><b>Benzerlik</b> = canlı karenin en yakın eğitim örneğine kosinüs yakınlığı. Eşiğin altına düşerse model <b>"🤔 Bilmiyorum"</b> der (open-set reddetme = OOD çözümü). Eşik <b>0 = kapalı</b> → her şeye bir obje der (OOD problemi).</div>
     </div>
 
     <!-- KANDIR sheet -->
@@ -233,6 +244,11 @@
         <div class="t">2 · <b>Güven ≠ doğruluk</b></div>
         <p>Modele <b>hiç eğitmediğin 4. bir şey</b> göster (yüz, duvar, başka obje). Yine de 3 objeden birini %80+ güvenle mi söylüyor?</p>
         <div class="why">→ Out-of-distribution: model "bilmiyorum" diyemez; güven kalibre değildir.</div>
+      </div>
+      <div class="exp" style="border-color:#1f6b3f">
+        <div class="t">3 · <b style="color:#2BD576">Çözüm: "Bilmiyorum" eşiği</b></div>
+        <p>🔬 Lab'da <b>"Bilmiyorum" eşiği</b>ni 0'dan yukarı çek; canlı <b>benzerlik</b> değerini izle. Eğitmediğin şeyde benzerlik düşük → eşiğin altına inince model <b>🤔 Bilmiyorum</b> der.</p>
+        <div class="why">→ Open-set recognition: en yakın örnek çok uzaksa reddet — OOD'nin en pratik çözümü.</div>
       </div>
     </div>
 
@@ -339,6 +355,7 @@
   let counts=[0,0,0];
   let lastT=performance.now(), fpsEMA=0, kVal=5, stabEMA=0;
   let liveVec=null, lastConfidences=null;
+  let oodThresh=0, lastSim=1;
   const samples=[];  // {vec,cls}
 
   // ---------- boot ----------
@@ -416,23 +433,43 @@
     const idx=+res.label;
     const conf=Math.round((res.confidences[idx]||0)*100);
     lastConfidences=res.confidences;
-    const col=COLORS[idx];
-    $("verdict").classList.add("on");
-    $("vlabel").textContent=className(idx); $("vlabel").style.color=col;
-    $("vconf").textContent=conf+"%"; $("vconf").style.color=col;
-    $("frame").style.borderColor=col;
     const total=counts.reduce((a,b)=>a+b,0);
-    $("vsub").textContent="canlı tahmin · k-NN(k="+Math.min(kVal,total)+") · "+total+" örnek";
-    for(let i=0;i<NCLS;i++){ $("seg"+i).style.background=COLORS[i]; $("seg"+i).style.width=((res.confidences[i]||0)*100)+"%"; }
+    const sim = liveVec ? bestSimTo(liveVec) : 1;
+    lastSim = sim;
+
+    // Lab: canlı benzerlik göstergesi
+    $("simVal").textContent = sim.toFixed(2);
+    $("simBar").style.width = (Math.max(0,Math.min(1,sim))*100)+"%";
+    $("simBar").style.background = (oodThresh>0 && sim<oodThresh) ? "#FF6B6B" : "var(--c2)";
+    // kararlılık
     stabEMA=stabEMA?stabEMA*0.8+conf*0.2:conf;
     $("stabBar").style.width=stabEMA+"%";
     $("stabBar").style.background=stabEMA>75?"var(--c2)":stabEMA>55?"var(--warn)":"#FF6B6B";
     $("stabVal").textContent=Math.round(stabEMA)+"%";
-    const ood=isOOD(liveVec);
-    $("ood").classList.toggle("hidden", !(ood && conf>=80));
+
+    $("verdict").classList.add("on");
+    // OOD reddetme: benzerlik eşiğin altındaysa "Bilmiyorum"
+    if(oodThresh>0 && sim<oodThresh){
+      $("vlabel").textContent="🤔 Bilmiyorum"; $("vlabel").style.color="#9aa6b3";
+      $("vconf").textContent="";
+      $("frame").style.borderColor="#9aa6b3";
+      $("vsub").textContent="en yakın örnek uzak · benzerlik "+sim.toFixed(2)+" < eşik "+oodThresh.toFixed(2);
+      for(let i=0;i<NCLS;i++){ $("seg"+i).style.width="0%"; }
+      $("ood").classList.add("hidden");
+      return;
+    }
+    const col=COLORS[idx];
+    $("vlabel").textContent=className(idx); $("vlabel").style.color=col;
+    $("vconf").textContent=conf+"%"; $("vconf").style.color=col;
+    $("frame").style.borderColor=col;
+    $("vsub").textContent="canlı tahmin · k-NN(k="+Math.min(kVal,total)+") · "+total+" örnek";
+    for(let i=0;i<NCLS;i++){ $("seg"+i).style.background=COLORS[i]; $("seg"+i).style.width=((res.confidences[i]||0)*100)+"%"; }
+    // reddetme kapalıyken bile düşük benzerlik + yüksek güveni işaretle
+    if(sim<0.55 && conf>=80){ $("ood").textContent="⚠ tanıdık değil (benzerlik "+sim.toFixed(2)+") — yine de %"+conf+" güven"; $("ood").classList.remove("hidden"); }
+    else $("ood").classList.add("hidden");
   }
 
-  function isOOD(v){ if(!v||samples.length<3) return false; let best=-1; for(const s of samples){ const c=cosine(v,s.vec); if(c>best) best=c; } return best<0.55; }
+  function bestSimTo(v){ if(!v||!samples.length) return 1; let b=-1; for(const s of samples){ const c=cosine(v,s.vec); if(c>b) b=c; } return b; }
   function cosine(a,b){ let d=0,na=0,nb=0; for(let i=0;i<a.length;i++){ d+=a[i]*b[i]; na+=a[i]*a[i]; nb+=b[i]*b[i]; } return d/(Math.sqrt(na*nb)+1e-9); }
 
   // ---------- PCA ----------
@@ -533,6 +570,7 @@
   $("kandirX").addEventListener("click",closePanels);
   $("testX").addEventListener("click",closePanels);
   $("kSlider").addEventListener("input",e=>{ kVal=+e.target.value; $("kVal").textContent=kVal; });
+  $("oodSlider").addEventListener("input",e=>{ oodThresh=+e.target.value; $("oodVal").textContent = oodThresh<=0?"kapalı":oodThresh.toFixed(2); });
 
   boot();
 })();
