@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>QR · Kalite İstasyonu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --red:#ED0007; --red-deep:#B7000A;
+    --ink:#0A0A0C; --ink-2:#121215; --line:rgba(255,255,255,.12);
+    --white:#fff; --silver:#A4A6B3; --accent:#39B7FF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{background:var(--ink);color:var(--white);font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;position:relative;}
+
+  /* background grid + glow (davetiyeden) */
+  .bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:linear-gradient(rgba(237,0,7,.06) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(237,0,7,.06) 1px,transparent 1px);
+    background-size:64px 64px;
+    mask-image:radial-gradient(ellipse at center,#000 35%,transparent 80%);}
+  .bg-glow{position:fixed;top:38%;left:50%;width:900px;height:900px;border-radius:50%;
+    transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(237,0,7,.30),transparent 60%);
+    filter:blur(80px);z-index:0;pointer-events:none;}
+
+  /* top nav: Bosch logo */
+  .nav{position:relative;z-index:3;display:flex;justify-content:space-between;align-items:center;
+    padding:22px 34px;}
+  .nav-logo{display:flex;align-items:center;gap:14px;}
+  .nav-symbol{width:40px;height:40px;}
+  .nav-symbol svg path{fill:var(--white);}
+  .nav-word{width:80px;}
+  .nav-word svg path{fill:var(--red);}
+  .nav-meta{font-family:'Space Grotesk',monospace;font-size:11px;letter-spacing:3px;
+    text-transform:uppercase;padding:8px 14px;border:1px solid var(--red);
+    background:rgba(237,0,7,.10);backdrop-filter:blur(10px);}
+
+  /* main */
+  main{position:relative;z-index:3;flex:1;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:30px;text-align:center;padding:3vh 5vw 5vh;}
+  .eyebrow{display:inline-flex;align-items:center;gap:12px;font-family:'Space Grotesk',monospace;
+    font-size:11px;letter-spacing:4px;text-transform:uppercase;padding:10px 18px;
+    border:1px solid var(--red);background:rgba(237,0,7,.08);color:#fff;}
+  .eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--red);
+    box-shadow:0 0 14px var(--red);animation:pulse 1.5s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.7);opacity:.5;}}
+
+  h1{font-size:clamp(26px,4.4vw,52px);font-weight:800;letter-spacing:-.03em;line-height:1.04;}
+  h1 .accent{color:var(--red);font-style:italic;font-weight:900;}
+
+  .qrwrap{background:#fff;padding:22px;border-radius:8px;
+    box-shadow:0 0 0 2px rgba(237,0,7,.8),0 0 0 12px rgba(237,0,7,.12),
+      0 30px 80px rgba(237,0,7,.30);line-height:0;}
+  #qr img,#qr canvas{display:block;width:clamp(220px,36vh,440px)!important;height:clamp(220px,36vh,440px)!important;}
+
+  .url{font-family:'Space Grotesk',ui-monospace,monospace;font-size:clamp(15px,2.1vw,24px);
+    color:#fff;background:var(--ink-2);border:1px solid var(--line);border-radius:6px;
+    padding:11px 20px;letter-spacing:.5px;}
+  .url b{color:var(--red);}
+
+  .steps{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;}
+  .step{display:flex;align-items:center;gap:10px;font-family:'Space Grotesk',monospace;
+    font-size:clamp(12px,1.5vw,16px);color:var(--silver);
+    border:1px solid var(--line);padding:10px 16px;background:rgba(255,255,255,.02);}
+  .step b{color:var(--red);font-size:1.05em;}
+
+  /* bottom supergraphic stripe (davetiyeden) */
+  .supergraphic{position:relative;z-index:3;height:14px;width:100%;
+    background:repeating-linear-gradient(90deg,
+      #ed0007 0 44px,#88357f 44px 88px,#174290 88px 132px,#024995 132px 176px,
+      #00a3c9 176px 220px,#00a24c 220px 264px,#94bd55 264px 308px,
+      #3a4190 308px 352px,#d51317 352px 396px);}
+</style>
+</head>
+<body>
+  <!-- Bosch SVG defs -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <symbol id="boschSymbol" viewBox="63.6 63.6 96.4 96.4">
+      <path d="M111.8,63.6A48.2,48.2,0,1,0,160,111.8,48.226,48.226,0,0,0,111.8,63.6Zm0,91.9a43.7,43.7,0,1,1,43.7-43.7A43.745,43.745,0,0,1,111.8,155.5Z"/>
+      <path d="M131.7,81.7h-3.3V98.2H95.3V81.7H91.9a36.063,36.063,0,0,0,0,60.2h3.4V125.4h33.1v16.5h3.3a36.063,36.063,0,0,0,0-60.2Zm-41,53.7a31.572,31.572,0,0,1,0-47.2Zm37.7-14.6H95.3V102.7h33.1Zm4.5,14.5v-10h0V98.2h0v-10a31.66,31.66,0,0,1,0,47.1Z"/>
+    </symbol>
+    <symbol id="boschWord" viewBox="200 78 300 70">
+      <path d="M248.8,110.3a13.766,13.766,0,0,0,8.8-13c0-11.7-8.3-17.5-19.7-17.5H208v63.6h32.5c10,0,19.8-7,19.8-17.7C260.3,113,248.8,110.4,248.8,110.3ZM223.6,93h11.6a5.669,5.669,0,0,1,6,6,5.927,5.927,0,0,1-6.3,5.8H223.6V93Zm11.7,37.1H223.6V117.6H235c5.7,0,8.4,2.5,8.4,6.2C243.4,128.4,240,130.1,235.3,130.1Z"/>
+      <path d="M294.7,78.2c-18.4,0-29.2,14.7-29.2,33.3,0,18.7,10.8,33.3,29.2,33.3,18.5,0,29.2-14.6,29.2-33.3C323.9,92.9,313.2,78.2,294.7,78.2Zm0,51.4c-9,0-13.5-8.1-13.5-18.1s4.5-18,13.5-18,13.6,8.1,13.6,18C308.3,121.6,303.7,129.6,294.7,129.6Z"/>
+      <path d="M357.8,104.8l-2.2-.5c-5.4-1.1-9.7-2.5-9.7-6.4,0-4.2,4.1-5.9,7.7-5.9a17.894,17.894,0,0,1,13,5.9l9.9-9.8c-4.5-5.1-11.8-10-23.2-10-13.4,0-23.6,7.5-23.6,20,0,11.4,8.2,17,18.2,19.1l2.2.5c8.3,1.7,11.4,3,11.4,7,0,3.8-3.4,6.3-8.6,6.3-6.2,0-11.8-2.7-16.1-8.2l-10.1,10c5.6,6.7,12.7,11.9,26.4,11.9,11.9,0,24.6-6.8,24.6-20.7C377.9,109.5,366.9,106.7,357.8,104.8Z"/>
+      <path d="M413.3,129.6c-7,0-14.3-5.8-14.3-18.5,0-11.3,6.8-17.6,13.9-17.6,5.6,0,8.9,2.6,11.5,7.1l12.8-8.5c-6.4-9.7-14-13.8-24.5-13.8-19.2,0-29.6,14.9-29.6,32.9,0,18.9,11.5,33.7,29.4,33.7,12.6,0,18.6-4.4,25.1-13.8l-12.9-8.7C422.1,126.6,419.3,129.6,413.3,129.6Z"/>
+      <polygon points="479.9 79.8 479.9 103.2 460.6 103.2 460.6 79.8 443.9 79.8 443.9 143.4 460.6 143.4 460.6 118.3 479.9 118.3 479.9 143.4 496.6 143.4 496.6 79.8 479.9 79.8"/>
+    </symbol>
+  </defs></svg>
+
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+
+  <nav class="nav">
+    <div class="nav-logo">
+      <div class="nav-symbol"><svg viewBox="63.6 63.6 96.4 96.4"><use href="#boschSymbol"/></svg></div>
+      <div class="nav-word"><svg viewBox="200 78 300 70"><use href="#boschWord"/></svg></div>
+    </div>
+    <div class="nav-meta">Kalite İstasyonu</div>
+  </nav>
+
+  <main>
+    <div class="eyebrow"><span class="dot"></span>AI ile Kalite Kontrol</div>
+    <h1>Telefonunla kendi <span class="accent">modelini</span> eğit</h1>
+    <div class="qrwrap"><div id="qr"></div></div>
+    <div class="url" id="url">…</div>
+    <div class="steps">
+      <span class="step"><b>1</b> QR'ı okut</span>
+      <span class="step"><b>2</b> Örnek topla · SAĞLAM / KUSURLU</span>
+      <span class="step"><b>3</b> Canlı tahmini izle</span>
+    </div>
+  </main>
+
+  <div class="supergraphic"></div>
+
+<script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
+<script>
+  var target = new URL("./", location.href).href;
+  document.getElementById("url").innerHTML =
+    target.replace(/^https:\/\//,'<b>https://</b>');
+  new QRCode(document.getElementById("qr"), {
+    text: target, width: 440, height: 440,
+    colorDark: "#0A0A0C", colorLight: "#FFFFFF",
+    correctLevel: QRCode.CorrectLevel.M
+  });
+</script>
+</body>
+</html>
