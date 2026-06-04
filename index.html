@@ -72,7 +72,7 @@
     display:flex;align-items:center;gap:8px;}
   .lab h3 .x{margin-left:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel-2);
     color:var(--txt);font-size:12px;padding:4px 9px;cursor:pointer;}
-  #emb{width:100%;height:46vh;max-height:340px;min-height:200px;display:block;background:#0a0e13;border:1px solid var(--line);border-radius:10px;}
+  #emb{width:100%;aspect-ratio:1/1;max-height:54vh;display:block;background:#0a0e13;border:1px solid var(--line);border-radius:10px;}
   .legend{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:7px;}
   .legend span{display:inline-flex;align-items:center;gap:6px;}
   .dotL{width:9px;height:9px;border-radius:50%;}
@@ -505,7 +505,11 @@
   // ---------- embedding çizim ----------
   const emb=$("emb"), ectx=emb.getContext("2d");
   function drawEmb(){
-    const W=emb.width,H=emb.height,pad=34; ectx.clearRect(0,0,W,H);
+    const dpr=window.devicePixelRatio||1;
+    const cw=emb.clientWidth||300, ch=emb.clientHeight||300;
+    if(emb.width!==Math.round(cw*dpr)||emb.height!==Math.round(ch*dpr)){ emb.width=Math.round(cw*dpr); emb.height=Math.round(ch*dpr); }
+    ectx.setTransform(dpr,0,0,dpr,0,0);
+    const W=cw,H=ch,pad=34; ectx.clearRect(0,0,W,H);
     ectx.fillStyle="#0a0e13"; ectx.fillRect(0,0,W,H);
     if(!pca){ ectx.fillStyle="#8B97A6"; ectx.font="20px system-ui"; ectx.textAlign="center"; ectx.fillText("En az 3 örnek topla…",W/2,H/2); return; }
     const r=pca.range, sx=v=>pad+((v-r.minx)/((r.maxx-r.minx)||1))*(W-2*pad), sy=v=>H-pad-((v-r.miny)/((r.maxy-r.miny)||1))*(H-2*pad);
